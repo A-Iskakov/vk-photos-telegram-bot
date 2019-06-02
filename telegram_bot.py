@@ -75,7 +75,7 @@ if __name__ == "__main__":
 
     if TELEGRAM_BOT_USE_WEBHOOK:
         # set up webhook
-        updater.start_webhook(listen='127.0.0.1', port=8001, url_path=TELEGRAM_BOT_TOKEN)
+        updater.start_webhook(listen='127.0.0.1', port=8010, url_path=TELEGRAM_BOT_TOKEN)
         updater.bot.set_webhook(url=f'{TELEGRAM_BOT_EXTERNAL_URL}/{TELEGRAM_BOT_TOKEN}')
     else:
         # if webhook couldn't be set up
