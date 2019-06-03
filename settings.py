@@ -1,0 +1,8 @@
+TELEGRAM_BOT_TOKEN = 'dsdsddddddsadasdasdasdY'
+TELEGRAM_BOT_USE_WEBHOOK = False
+TELEGRAM_BOT_EXTERNAL_URL = 'https://example.com'
+VK_TOKEN = 'dasdasdasdfdfasdasdfasdfdfasdfdasdasdfasdf'
+VK_API_VERSION = 5.95
+VK_API_OWNER_ID = 11111111111
+VK_PHOTOS_COUNT = 1000
+TELEGRAM_GROUP = 11111111111111
