@@ -1,0 +1,23 @@
+#application: gcp-vk-bot
+#version: 1
+runtime: python37
+#api_version: 1
+#threadsafe: yes
+automatic_scaling:
+  target_cpu_utilization: 0.9
+  target_throughput_utilization: 0.9
+  min_instances: 0
+  max_instances: 2
+  min_pending_latency: 600ms  # default value
+  max_pending_latency: 1500ms
+  max_concurrent_requests: 80
+  max_idle_instances: 1
+  min_idle_instances: 0
+
+#handlers:
+#- url: /favicon\.ico
+#  static_files: favicon.ico
+#  upload: favicon\.ico
+entrypoint: python3 main.py
+#- url: .*
+#  script: auto

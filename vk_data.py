@@ -1,24 +1,31 @@
-
+from datetime import datetime, timedelta
+from random import randint
 
 import requests
 
 from settings import VK_TOKEN, VK_API_VERSION, VK_API_OWNER_ID
-from random import randint
+
 PHOTO_SIZE_PRIORITY = ('w', 'z', 'y')
 class VKApi:
     def __init__(self):
-        pass
+        self.albums = None
+        self.last_update = datetime.now() - timedelta(days=1)
 
     def get_albums(self):
-        params = {'owner_id': VK_API_OWNER_ID,
-                  'access_token': VK_TOKEN,
-                  'v': VK_API_VERSION,
-                  'need_system': 1}
-        result = requests.get('https://api.vk.com/method/photos.getAlbums', params)
-        if result.status_code == 200:
-            return result.json()
+        difference = datetime.now() - self.last_update
+        if difference.total_seconds() > 3600:
+            params = {'owner_id': VK_API_OWNER_ID,
+                      'access_token': VK_TOKEN,
+                      'v': VK_API_VERSION,
+                      'need_system': 1}
+            result = requests.get('https://api.vk.com/method/photos.getAlbums', params)
+            if result.status_code == 200:
+                self.albums = result.json()
+                return self.albums
+            else:
+                return None
         else:
-            return None
+            return self.albums
 
     def get_random_album_id(self):
         albums = self.get_albums()
