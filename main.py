@@ -23,15 +23,18 @@
 
 import os
 from datetime import time
-from functools import wraps
 from sys import stdout
 
-from telegram import ChatAction, InputMediaPhoto
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram import ChatAction, InputMediaPhoto, ParseMode
+from telegram.ext import Updater, CommandHandler
 
 from settings import TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USE_WEBHOOK, TELEGRAM_BOT_EXTERNAL_URL, TELEGRAM_GROUP, \
     ALLOWED_IDS
 from vk_data import VKApi
+
+# import logging
+# logging.basicConfig(level=logging.DEBUG,
+#                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 if 'PORT' in os.environ:
     PORT = int(os.environ['PORT'])
@@ -41,18 +44,7 @@ else:
 GENERAL_VK = VKApi()
 
 
-def send_typing_action_decorator(func):
-    """Sends typing action while processing func command."""
-
-    @wraps(func)
-    def command_func(update, context, *args, **kwargs):
-        context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.UPLOAD_PHOTO)
-        return func(update, context, *args, **kwargs)
-
-    return command_func
-
-
-def send_stats_on_schedule(context):
+def send_photos_on_schedule(context):
     media = []
     for _ in range(1, 6):
         photo_url, text = GENERAL_VK.get_random_photo()
@@ -79,27 +71,28 @@ def send_photos(update, context):
                 # update.message.reply_text(
                 #     text_message,
                 #     parse_mode=ParseMode.HTML)
-                media.append(InputMediaPhoto(caption=text, media=photo_url))
+                media.append(InputMediaPhoto(caption=text, media=photo_url, parse_mode=ParseMode.HTML))
 
         update.message.reply_media_group(media, disable_notification=True)
     else:
-        context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.UPLOAD_PHOTO)
+        context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
         update.message.reply_text('Access restricted')
 
 
 def main():
     updater = Updater(TELEGRAM_BOT_TOKEN, use_context=True)
+
     job_queue = updater.job_queue
 
-    job_queue.run_daily(send_stats_on_schedule, time(6, 55))
+    job_queue.run_daily(send_photos_on_schedule, time(6, 55))
 
     dispatcher = updater.dispatcher
 
-    send_stats_handler = CommandHandler('photos', send_photos)
-    dispatcher.add_handler(send_stats_handler)
+    send_photos_handler = CommandHandler('photos', send_photos)
+    dispatcher.add_handler(send_photos_handler)
 
-    echo_handler = MessageHandler(Filters.all, send_photos)
-    dispatcher.add_handler(echo_handler)
+    # echo_handler = MessageHandler(Filters.all, send_photos)
+    # dispatcher.add_handler(echo_handler)
 
     if TELEGRAM_BOT_USE_WEBHOOK:
         # set up webhook
