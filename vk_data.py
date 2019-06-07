@@ -5,7 +5,8 @@ import requests
 
 from settings import VK_TOKEN, VK_API_VERSION, VK_API_OWNER_ID, VK_IDS
 
-PHOTO_SIZE_PRIORITY = ('w', 'z', 'y')
+
+# PHOTO_SIZE_PRIORITY = ('w', 'z', 'y')
 class VKApi:
     def __init__(self):
         self.albums = None
@@ -77,47 +78,47 @@ class VKApi:
 
     def get_random_photo(self):
         photos, album_title = self.get_photos_from_random_album()
-        if photos:
-            random_photo_id = randint(0, photos['response']['count']-1)
-            random_photo_info = photos['response']['items'][random_photo_id]
-            index = -1
-            max_photo = ('x', index)
-            for item in reversed(random_photo_info['sizes']):
-                if item['type'] == 'w':
-                    max_photo  = ('w', index)
-                    break
-                if item['type'] == 'z':
-                    max_photo = ('z', index)
+        if photos is not None:
+            if 'response' in photos:
+                random_photo_id = randint(0, photos['response']['count'] - 1)
+                random_photo_info = photos['response']['items'][random_photo_id]
+                index = -1
+                max_photo = ('x', index)
+                for item in reversed(random_photo_info['sizes']):
+                    if item['type'] == 'w':
+                        max_photo = ('w', index)
+                        break
+                    if item['type'] == 'z':
+                        max_photo = ('z', index)
+                        index -= 1
+                        continue
+                    if item['type'] == 's':
+                        break
+
+                    if item['type'] == 'y' and max_photo[0] != 'z':
+                        max_photo = ('y', index)
+                        index -= 1
+                        continue
+                    if item['type'] == 'x' and max_photo[0] != 'z' and max_photo[0] != 'y':
+                        max_photo = ('x', index)
+                        index -= 1
+                        continue
                     index -= 1
-                    continue
-                if item['type'] == 's':
-                    break
+                # pprint(random_photo_info['sizes'])
+                # return  max_photo
+                caption = f"<i>Альбом</i> - <b>{album_title}</b>"
+                if random_photo_info['text']:
+                    caption += f"\n<b>{random_photo_info['text']}</b>\n"
 
-                if item['type'] == 'y' and max_photo[0] != 'z':
-                    max_photo = ('y', index)
-                    index -= 1
-                    continue
-                if item['type'] == 'x' and max_photo[0] != 'z' and max_photo[0] != 'y':
-                    max_photo = ('x', index)
-                    index -= 1
-                    continue
-                index -= 1
-            # pprint(random_photo_info['sizes'])
-            # return  max_photo
-            caption = f"<i>Альбом</i> - <b>{album_title}</b>"
-            if random_photo_info['text']:
-                caption += f"\n<b>{random_photo_info['text']}</b>\n"
+                if random_photo_info['comments']['count'] > 0:
+                    comments = self.get_comments_from_photo(random_photo_info['id'])
+                    # profiles = DataFrame(comments['profiles'])
+                    for comment in comments['items']:
+                        caption += f"\n<b>{self.search_list(comments['profiles'], comment['from_id'])}</b>"
+                        caption += f"\n<i>{comment['text']}</i>"
 
-            if random_photo_info['comments']['count'] > 0:
-                comments = self.get_comments_from_photo(random_photo_info['id'])
-                # profiles = DataFrame(comments['profiles'])
-                for comment in comments['items']:
-                    caption += f"\n<b>{self.search_list(comments['profiles'], comment['from_id'])}</b>"
-                    caption += f"\n<i>{comment['text']}</i>"
+                    # print(profiles[profiles['id'] == comments['items'][0]['from_id']].to_dict('records'))
 
-                # print(profiles[profiles['id'] == comments['items'][0]['from_id']].to_dict('records'))
+                return random_photo_info['sizes'][max_photo[1]]['url'], caption
 
-            return random_photo_info['sizes'][max_photo[1]]['url'], caption
-        else:
-            return None, None
-
+        return None, None
