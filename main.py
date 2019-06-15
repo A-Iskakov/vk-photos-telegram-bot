@@ -50,6 +50,9 @@ def send_photos_on_schedule(context):
     for _ in range(1, 6):
         photo_url, text = GENERAL_VK.get_random_photo()
 
+        if len(text) > 1024:
+            text = text[:1023]
+
         if photo_url:
             media.append(InputMediaPhoto(caption=text, media=photo_url, parse_mode=ParseMode.HTML))
 
@@ -59,18 +62,7 @@ def send_photos_on_schedule(context):
         context.bot.send_media_group(chat_id=TELEGRAM_GROUP, media=media, disable_notification=True, timeout=90)
 
 
-def send_photos_on_schedule_test(context):
-    media = []
-    for _ in range(1, 6):
-        photo_url, text = GENERAL_VK.get_random_photo()
 
-        if photo_url:
-            media.append(InputMediaPhoto(caption=text, media=photo_url, parse_mode=ParseMode.HTML))
-
-    if media:
-        context.bot.send_message(chat_id=ALLOWED_IDS[0], text='Фотографии сегодняшего дня test')
-        context.bot.send_chat_action(chat_id=ALLOWED_IDS[0], action=ChatAction.UPLOAD_PHOTO)
-        context.bot.send_media_group(chat_id=ALLOWED_IDS[0], disable_notification=True, media=media, timeout=90)
 
 
 def send_photos(update, context):
@@ -81,6 +73,8 @@ def send_photos(update, context):
         media = []
         for _ in range(1, 6):
             photo_url, text = GENERAL_VK.get_random_photo()
+            if len(text) > 1024:
+                text = text[:1023]
 
             if photo_url:
                 # update.message.reply_text(
@@ -113,7 +107,6 @@ def main():
     job_queue = updater.job_queue
 
     job_queue.run_daily(send_photos_on_schedule, time(6, 55))
-    job_queue.run_daily(send_photos_on_schedule_test, time(20, 15))
 
     dispatcher = updater.dispatcher
 

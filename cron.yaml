@@ -1,5 +1,10 @@
 cron:
   - description: "everyday"
     url: /
-    schedule: every day 12:50
+    schedule: every day 12:52
+    timezone: Asia/Almaty
+
+  - description: "everyday second"
+    url: /
+    schedule: every day 12:54
     timezone: Asia/Almaty
