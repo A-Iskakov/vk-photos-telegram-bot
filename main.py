@@ -47,13 +47,12 @@ GENERAL_VK = VKApi()
 
 def send_photos_on_schedule(context):
     media = []
-    for _ in range(1, 6):
+    for _ in range(1, 8):
         photo_url, text = GENERAL_VK.get_random_photo()
 
-        if len(text) > 1024:
-            text = text[:1023]
-
         if photo_url:
+            if len(text) > 1024:
+                text = text[:1023]
             media.append(InputMediaPhoto(caption=text, media=photo_url, parse_mode=ParseMode.HTML))
 
     if media:
@@ -71,15 +70,12 @@ def send_photos(update, context):
     if update.message.chat_id in ALLOWED_IDS:
         context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.UPLOAD_PHOTO)
         media = []
-        for _ in range(1, 6):
+        for _ in range(1, 8):
             photo_url, text = GENERAL_VK.get_random_photo()
-            if len(text) > 1024:
-                text = text[:1023]
 
             if photo_url:
-                # update.message.reply_text(
-                #     text_message,
-                #     parse_mode=ParseMode.HTML)
+                if len(text) > 1024:
+                    text = text[:1023]
                 media.append(InputMediaPhoto(caption=text, media=photo_url, parse_mode=ParseMode.HTML))
 
         try:
