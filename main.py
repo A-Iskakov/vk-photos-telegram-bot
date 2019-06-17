@@ -26,7 +26,7 @@ from datetime import time, datetime
 from sys import stdout
 
 from telegram import ChatAction, InputMediaPhoto, ParseMode
-from telegram.error import TimedOut
+from telegram.error import TimedOut, BadRequest
 from telegram.ext import Updater, CommandHandler
 
 from settings import TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USE_WEBHOOK, TELEGRAM_BOT_EXTERNAL_URL, TELEGRAM_GROUP, \
@@ -34,8 +34,9 @@ from settings import TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USE_WEBHOOK, TELEGRAM_BOT_
 from vk_data import VKApi
 
 # import logging
-# logging.basicConfig(level=logging.DEBUG,
-#                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# logging.basicConfig(level=logging.WARNING,
+#                     # format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+#                     )
 
 if 'PORT' in os.environ:
     PORT = int(os.environ['PORT'])
@@ -53,6 +54,7 @@ def send_photos_on_schedule(context):
         if photo_url:
             if len(text) > 1024:
                 text = text[:1023]
+
             media.append(InputMediaPhoto(caption=text, media=photo_url, parse_mode=ParseMode.HTML))
 
     if media:
@@ -70,18 +72,32 @@ def send_photos(update, context):
     if update.message.chat_id in ALLOWED_IDS:
         context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.UPLOAD_PHOTO)
         media = []
-        for _ in range(1, 8):
+        for i in range(1, 8):
             photo_url, text = GENERAL_VK.get_random_photo()
 
             if photo_url:
-                if len(text) > 1024:
-                    text = text[:1023]
+                text_length = len(text)
+                if text_length > 1024:
+                    end = text_length - 1
+                    while True:
+                        index = text.rfind('\n', 0, end)
+                        if index < 1024:
+                            text = text[:index - 1]
+                            break
+                        else:
+                            end = index - 1
+
+                # logging.error(text)
                 media.append(InputMediaPhoto(caption=text, media=photo_url, parse_mode=ParseMode.HTML))
 
         try:
             update.message.reply_media_group(media, disable_notification=True, timeout=90)
         except TimedOut:
             update.message.reply_text('VK server timeout')
+        except BadRequest:
+            error_message = [input_media.caption for input_media in media]
+            print(f'error with {error_message}')
+
     else:
         context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
         update.message.reply_text('Access restricted')

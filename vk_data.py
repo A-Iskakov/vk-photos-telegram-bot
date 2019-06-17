@@ -3,7 +3,7 @@ from random import randint
 
 import requests
 
-from settings import VK_TOKEN, VK_API_VERSION, VK_API_OWNER_ID, VK_IDS
+from settings import VK_TOKEN, VK_API_VERSION, VK_API_OWNER_ID, VK_IDS, MY_ALBUMS
 
 
 # PHOTO_SIZE_PRIORITY = ('w', 'z', 'y')
@@ -14,7 +14,7 @@ class VKApi:
 
     def get_albums(self):
         difference = datetime.now() - self.last_update
-        if difference.total_seconds() > 3600:
+        if difference.total_seconds() > 3600 * 23:
             params = {'owner_id': VK_API_OWNER_ID,
                       'access_token': VK_TOKEN,
                       'v': VK_API_VERSION,
@@ -22,23 +22,30 @@ class VKApi:
             result = requests.get('https://api.vk.com/method/photos.getAlbums', params)
             if result.status_code == 200:
                 self.albums = result.json()
-                return self.albums
-            else:
-                return None
-        else:
-            return self.albums
+                for album in MY_ALBUMS:
+                    self.albums['response']['items'].append(album)
+                self.albums['response']['count'] += 3
+                self.last_update = datetime.now()
+
 
     def get_random_album_id(self):
-        albums = self.get_albums()
-        if albums:
-            random_album = randint(0, albums['response']['count']-1)
-            return albums['response']['items'][random_album]['id'], albums['response']['items'][random_album]['title']
+        self.get_albums()
+        if self.albums is not None:
+            try:
+                random_album = randint(0, self.albums['response']['count'] - 1)
+            except KeyError:
+                print(self.albums)
+                raise
+
+            return self.albums['response']['items'][random_album]['id'], self.albums['response']['items'][random_album][
+                'title'], self.albums['response']['items'][random_album]['owner_id']
+
         else:
             return None, None
 
     def get_photos_from_random_album(self):
-        album_id, album_title = self.get_random_album_id()
-        params = {'owner_id': VK_API_OWNER_ID,
+        album_id, album_title, owner_id = self.get_random_album_id()
+        params = {'owner_id': owner_id,
                   'access_token': VK_TOKEN,
                   'v': VK_API_VERSION,
                   'count': 1000,
@@ -50,8 +57,8 @@ class VKApi:
         else:
             return None, None
 
-    def get_comments_from_photo(self, photo_id):
-        params = {'owner_id': VK_API_OWNER_ID,
+    def get_comments_from_photo(self, photo_id, owner_id):
+        params = {'owner_id': owner_id,
                   'access_token': VK_TOKEN,
                   'v': VK_API_VERSION,
                   'count': 100,
@@ -63,7 +70,7 @@ class VKApi:
         else:
             return None
 
-    def search_list(self, list_of_dicts, query):
+    def search_comment_author_from_list(self, list_of_dicts, query):
         for elem in list_of_dicts:
             if elem['id'] == query:
                 if elem['first_name'] != 'DELETED':
@@ -111,10 +118,12 @@ class VKApi:
                     caption += f"\n<b>{random_photo_info['text']}</b>\n"
 
                 if random_photo_info['comments']['count'] > 0:
-                    comments = self.get_comments_from_photo(random_photo_info['id'])
+                    comments = self.get_comments_from_photo(random_photo_info['id'], random_photo_info['owner_id'])
                     # profiles = DataFrame(comments['profiles'])
                     for comment in comments['items']:
-                        caption += f"\n<b>{self.search_list(comments['profiles'], comment['from_id'])}</b>"
+                        caption += f"\n<b>" \
+                            f"{self.search_comment_author_from_list(comments['profiles'], comment['from_id'])}" \
+                            f"</b>"
                         caption += f"\n<i>{comment['text']}</i>"
 
                     # print(profiles[profiles['id'] == comments['items'][0]['from_id']].to_dict('records'))
