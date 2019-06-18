@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from random import randint
+from time import sleep
 
 import requests
 
@@ -11,6 +12,7 @@ class VKApi:
     def __init__(self):
         self.albums = None
         self.last_update = datetime.now() - timedelta(days=1)
+        self.photos = {}
 
     def get_albums(self):
         difference = datetime.now() - self.last_update
@@ -21,12 +23,16 @@ class VKApi:
                       'need_system': 1}
             result = requests.get('https://api.vk.com/method/photos.getAlbums', params)
             if result.status_code == 200:
-                self.albums = result.json()
-                for album in MY_ALBUMS:
-                    self.albums['response']['items'].append(album)
-                self.albums['response']['count'] += 3
-                self.last_update = datetime.now()
-
+                if 'response' in result.json():
+                    self.albums = result.json()
+                    for album in MY_ALBUMS:
+                        self.albums['response']['items'].append(album)
+                    self.albums['response']['count'] += 3
+                    self.last_update = datetime.now()
+                    self.photos = {}
+                else:
+                    sleep(1)
+                    return self.get_albums()
 
     def get_random_album_id(self):
         self.get_albums()
@@ -45,17 +51,26 @@ class VKApi:
 
     def get_photos_from_random_album(self):
         album_id, album_title, owner_id = self.get_random_album_id()
-        params = {'owner_id': owner_id,
-                  'access_token': VK_TOKEN,
-                  'v': VK_API_VERSION,
-                  'count': 1000,
-                  'extended': 1,
-                  'album_id': album_id}
-        result = requests.get('https://api.vk.com/method/photos.get', params)
-        if result.status_code == 200:
-            return result.json(), album_title
+        if album_id not in self.photos:
+            params = {'owner_id': owner_id,
+                      'access_token': VK_TOKEN,
+                      'v': VK_API_VERSION,
+                      'count': 1000,
+                      'extended': 1,
+                      'album_id': album_id}
+            result = requests.get('https://api.vk.com/method/photos.get', params)
+            if result.status_code == 200:
+                # print('got new photos')
+                if 'response' in result.json():
+                    self.photos.update({album_id: result.json()})
+                    return result.json(), album_title
+                else:
+                    sleep(1)
+                    return self.get_photos_from_random_album()
+            else:
+                return None, None
         else:
-            return None, None
+            return self.photos[album_id], album_title
 
     def get_comments_from_photo(self, photo_id, owner_id):
         params = {'owner_id': owner_id,
@@ -66,7 +81,11 @@ class VKApi:
                   'photo_id': photo_id}
         result = requests.get('https://api.vk.com/method/photos.getComments', params)
         if result.status_code == 200:
-            return result.json()['response']
+            if 'response' in result.json():
+                return result.json()['response']
+            else:
+                sleep(1)
+                return self.get_comments_from_photo(photo_id, owner_id)
         else:
             return None
 
@@ -113,18 +132,16 @@ class VKApi:
                     index -= 1
                 # pprint(random_photo_info['sizes'])
                 # return  max_photo
-                caption = f"<i>Альбом</i> - <b>{album_title}</b>"
+                caption = f"Альбом - {album_title}"
                 if random_photo_info['text']:
-                    caption += f"\n<b>{random_photo_info['text']}</b>\n"
+                    caption += f"\n{random_photo_info['text']}"
 
                 if random_photo_info['comments']['count'] > 0:
                     comments = self.get_comments_from_photo(random_photo_info['id'], random_photo_info['owner_id'])
                     # profiles = DataFrame(comments['profiles'])
                     for comment in comments['items']:
-                        caption += f"\n<b>" \
-                            f"{self.search_comment_author_from_list(comments['profiles'], comment['from_id'])}" \
-                            f"</b>"
-                        caption += f"\n<i>{comment['text']}</i>"
+                        caption += f"\n{self.search_comment_author_from_list(comments['profiles'], comment['from_id'])}"
+                        caption += f"\n{comment['text']}"
 
                     # print(profiles[profiles['id'] == comments['items'][0]['from_id']].to_dict('records'))
 
