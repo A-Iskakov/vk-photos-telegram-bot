@@ -21,22 +21,22 @@
 #         self.response.write('Hello world!')
 
 
+import logging
 import os
 from datetime import time, datetime
 from sys import stdout
 
-from telegram import ChatAction, InputMediaPhoto, ParseMode
+from telegram import ChatAction, InputMediaPhoto
 from telegram.error import TimedOut, BadRequest
-from telegram.ext import Updater, CommandHandler
+from telegram.ext import Updater, CommandHandler, run_async
 
 from settings import TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USE_WEBHOOK, TELEGRAM_BOT_EXTERNAL_URL, TELEGRAM_GROUP, \
     ALLOWED_IDS
 from vk_data import VKApi
 
-# import logging
-# logging.basicConfig(level=logging.WARNING,
-#                     # format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-#                     )
+logging.basicConfig(level=logging.WARNING,
+                    # format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+                    )
 
 if 'PORT' in os.environ:
     PORT = int(os.environ['PORT'])
@@ -46,6 +46,7 @@ else:
 GENERAL_VK = VKApi()
 
 
+@run_async
 def send_photos_on_schedule(context):
     media = []
     for _ in range(1, 8):
@@ -53,9 +54,10 @@ def send_photos_on_schedule(context):
 
         if photo_url:
             if len(text) > 1024:
-                text = text[:1023]
+                index = text.rfind('\n', 0, 1023)
+                text = text[:index]
 
-            media.append(InputMediaPhoto(caption=text, media=photo_url, parse_mode=ParseMode.HTML))
+        media.append(InputMediaPhoto(caption=text, media=photo_url))
 
     if media:
         context.bot.send_message(chat_id=TELEGRAM_GROUP, text='Фотографии сегодняшего дня')
@@ -63,9 +65,7 @@ def send_photos_on_schedule(context):
         context.bot.send_media_group(chat_id=TELEGRAM_GROUP, media=media, disable_notification=True, timeout=90)
 
 
-
-
-
+@run_async
 def send_photos(update, context):
     # print(update.effective_message.chat_id)
 
@@ -78,31 +78,28 @@ def send_photos(update, context):
             if photo_url:
                 text_length = len(text)
                 if text_length > 1024:
-                    end = text_length - 1
-                    while True:
-                        index = text.rfind('\n', 0, end)
-                        if index < 1024:
-                            text = text[:index - 1]
-                            break
-                        else:
-                            end = index - 1
+                    index = text.rfind('\n', 0, 1023)
+                    text = text[:index]
 
                 # logging.error(text)
-                media.append(InputMediaPhoto(caption=text, media=photo_url, parse_mode=ParseMode.HTML))
+                media.append(InputMediaPhoto(caption=text, media=photo_url))
 
         try:
             update.message.reply_media_group(media, disable_notification=True, timeout=90)
         except TimedOut:
-            update.message.reply_text('VK server timeout')
+            update.message.reply_text('VK server timeout, try again')
         except BadRequest:
             error_message = [input_media.caption for input_media in media]
-            print(f'error with {error_message}')
+            logging.warning(f'error with {error_message}')
+            update.message.reply_text('VK server timeout, try again')
+            raise
 
     else:
         context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
         update.message.reply_text('Access restricted')
 
 
+@run_async
 def send_time(update, context):
     # print(update.effective_message.chat_id)
 
@@ -112,6 +109,7 @@ def send_time(update, context):
     else:
         context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
         update.message.reply_text('Access restricted')
+
 
 def main():
     updater = Updater(TELEGRAM_BOT_TOKEN, use_context=True)
