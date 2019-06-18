@@ -78,7 +78,6 @@ def send_photos(update, context):
                 text_length = len(text)
                 if text_length > 1024:
                     text = text[:1023]
-
                 # logging.error(text)
                 media.append(InputMediaPhoto(caption=text, media=photo_url))
 
