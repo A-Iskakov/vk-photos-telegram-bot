@@ -89,6 +89,28 @@ class VKApi:
         else:
             return None
 
+    def create_comment_on_photo(self, photo_id, owner_id, access_token, comment):
+        params = {'owner_id': owner_id,
+                  'access_token': access_token,
+                  'v': VK_API_VERSION,
+                  'message': comment,
+                  'photo_id': photo_id}
+        result = requests.post('https://api.vk.com/method/photos.createComment', params)
+        if result.status_code == 200:
+            result_dict = result.json()
+            if 'response' in result_dict:
+                if type(result_dict['response']) == int:
+                    return True
+                else:
+                    return False
+            if 'error' in result_dict:
+                return False
+            else:
+                sleep(1)
+                return self.create_comment_on_photo(photo_id, owner_id, access_token, comment)
+        else:
+            return None
+
     def search_comment_author_from_list(self, list_of_dicts, query):
         for elem in list_of_dicts:
             if elem['id'] == query:
@@ -132,7 +154,8 @@ class VKApi:
                     index -= 1
                 # pprint(random_photo_info['sizes'])
                 # return  max_photo
-                caption = f"Альбом - {album_title}"
+
+                caption = f"{random_photo_info['id']}@ Альбом - {album_title}"
                 if random_photo_info['text']:
                     caption += f"\n{random_photo_info['text']}"
 
