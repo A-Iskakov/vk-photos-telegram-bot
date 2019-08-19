@@ -27,7 +27,7 @@ class VKApi:
                     self.albums = result.json()
                     for album in MY_ALBUMS:
                         self.albums['response']['items'].append(album)
-                    self.albums['response']['count'] += 3
+                    self.albums['response']['count'] += len(MY_ALBUMS)
                     self.last_update = datetime.now()
                     self.photos = {}
                 else:

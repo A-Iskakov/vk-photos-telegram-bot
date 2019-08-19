@@ -148,7 +148,7 @@ def callback_query(update, context):
     if update.callback_query.data == 'how':
         context.bot.answer_callback_query(update.callback_query.id,
                                           text='Твой комментарий отсюда отправится прямиком под эту фотку '
-                                               'в VK на память.\nДля этого нужно один единстенный раз, авторизироваться'
+                                               'в VK на память.\nДля этого нужно один раз, авторизироваться'
                                                ' через Telegram в VK', show_alert=True)
         return CHOOSING
     if update.callback_query.data == 'yes':
@@ -165,7 +165,7 @@ def callback_query(update, context):
         else:
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text=f'<a href="tg://user?id={update.effective_user.id}">{update.effective_user.first_name}</a>,'
-                                     ' для этого нужно один единстенный раз, авторизироваться'
+                                     ' для этого нужно один раз, авторизироваться'
                                      'через Telegram в VK',
                                      quote=True, parse_mode=ParseMode.HTML)
             context.bot.answer_callback_query(update.callback_query.id,
@@ -236,6 +236,7 @@ def main():
         # per_message=True,
 
         fallbacks=[MessageHandler(Filters.all, done)],
+        allow_reentry=True
         # name="my_conversation",
         # persistent=True
     )
@@ -244,10 +245,10 @@ def main():
     if TELEGRAM_BOT_USE_WEBHOOK:
         # set up webhook
         updater.start_webhook(listen='127.0.0.1', port=PORT, url_path=TELEGRAM_BOT_TOKEN)
-        updater.bot.set_webhook(url=f'{TELEGRAM_BOT_EXTERNAL_URL}/{TELEGRAM_BOT_TOKEN}')
+        updater.bot.set_webhook(url=f'{TELEGRAM_BOT_EXTERNAL_URL}/{TELEGRAM_BOT_TOKEN}', timeout=60)
     else:
         # if webhook couldn't be set up
-        updater.start_polling()
+        updater.start_polling(timeout=60)
 
     job_queue.start()
     stdout.write(f'Telegram bot coroutine has started\n{updater.bot.get_me()}\n')
